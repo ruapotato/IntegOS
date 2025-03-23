@@ -1,0 +1,19 @@
+# config/hooks/normal/0010-custom.hook.chroot
+#!/bin/sh
+
+# Exit on error
+set -e
+
+# Enable services
+systemctl enable lightdm.service
+
+# Set Cinnamon as default desktop
+update-alternatives --set x-session-manager /usr/bin/cinnamon-session
+
+# Configure LightDM to use Cinnamon by default
+if [ -d "/etc/lightdm" ]; then
+    echo "[Seat:*]" > /etc/lightdm/lightdm.conf.d/50-cinnamon.conf
+    echo "user-session=cinnamon" >> /etc/lightdm/lightdm.conf.d/50-cinnamon.conf
+fi
+
+# Add any additional system configurations here

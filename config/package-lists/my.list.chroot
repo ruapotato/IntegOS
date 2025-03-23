@@ -1,3 +1,32 @@
-task-desktop
+# config/package-lists/my.list.chroot
+
+# Desktop Environment
 cinnamon
+cinnamon-desktop-environment
+lightdm
+
+# Internet and Communication
 firefox-esr
+wget
+curl
+ca-certificates
+
+# System Utilities
+sudo
+gdebi
+apt-transport-https
+gnupg
+software-properties-common
+
+# Office and Productivity
+libreoffice
+evince
+
+# Media and Codecs
+vlc
+ffmpeg
+
+# Development and Admin Tools
+git
+htop
+neofetch

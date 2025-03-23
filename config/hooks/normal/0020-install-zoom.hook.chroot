@@ -1,0 +1,22 @@
+# config/hooks/normal/0020-install-zoom.hook.chroot
+#!/bin/sh
+
+# Exit on error
+set -e
+
+# Create temporary directory
+TEMPDIR=$(mktemp -d)
+cd $TEMPDIR
+
+# Download Zoom
+echo "Downloading Zoom..."
+wget https://zoom.us/client/6.4.1.587/zoom_amd64.deb
+
+# Install Zoom and its dependencies
+echo "Installing Zoom..."
+apt-get update
+apt-get install -y ./zoom_amd64.deb
+
+# Cleanup
+cd /
+rm -rf $TEMPDIR
