@@ -210,6 +210,6 @@ config/packages*/
 config/preseed/
 config/rootfs/
 
-# Generated hooks (keep only our custom ones)
-config/hooks/normal/[1-9]*.hook.chroot
+# Generated
+config
 
