@@ -1,32 +1,31 @@
-# config/package-lists/my.list.chroot
-
-# Desktop Environment
-cinnamon
+# Desktop environment
 cinnamon-desktop-environment
 lightdm
 
-# Internet and Communication
-firefox-esr
-wget
-curl
-ca-certificates
+# Default removal of other DEs
+gnome- gnome-shell- gdm3-
+kde-
+xfce4-
 
-# System Utilities
+# Base system tools
+linux-image-amd64
+firmware-linux
 sudo
+curl
+wget
+network-manager
+network-manager-gnome
+
+# Browser
+firefox-esr
+
+# Development tools
+git
+vim
+build-essential
+
+# System utilities
 gdebi
 apt-transport-https
-gnupg
+ca-certificates
 software-properties-common
-
-# Office and Productivity
-libreoffice
-evince
-
-# Media and Codecs
-vlc
-ffmpeg
-
-# Development and Admin Tools
-git
-htop
-neofetch

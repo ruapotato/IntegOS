@@ -1,19 +1,27 @@
-# config/hooks/normal/0010-custom.hook.chroot
 #!/bin/sh
-
-# Exit on error
 set -e
 
-# Enable services
-systemctl enable lightdm.service
+# Remove any GNOME components
+apt-get remove -y gnome gnome-shell gdm3 || true
 
-# Set Cinnamon as default desktop
-update-alternatives --set x-session-manager /usr/bin/cinnamon-session
-
-# Configure LightDM to use Cinnamon by default
-if [ -d "/etc/lightdm" ]; then
-    echo "[Seat:*]" > /etc/lightdm/lightdm.conf.d/50-cinnamon.conf
-    echo "user-session=cinnamon" >> /etc/lightdm/lightdm.conf.d/50-cinnamon.conf
+# Ensure Cinnamon is default
+if [ -f /usr/bin/cinnamon-session ]; then
+    update-alternatives --set x-session-manager /usr/bin/cinnamon-session || true
 fi
 
-# Add any additional system configurations here
+# Configure LightDM
+mkdir -p /etc/lightdm/lightdm.conf.d/
+cat > /etc/lightdm/lightdm.conf.d/50-cinnamon.conf << EOF
+[Seat:*]
+user-session=cinnamon
+EOF
+
+# Enable LightDM
+systemctl enable lightdm.service
+systemctl disable gdm.service || true
+
+# Create Cinnamon autostart
+mkdir -p /etc/skel/.config/autostart/
+
+# Set default display manager
+echo "/usr/sbin/lightdm" > /etc/X11/default-display-manager
