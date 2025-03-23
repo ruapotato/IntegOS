@@ -172,3 +172,44 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+# Build directories and artifacts
+.build/
+binary/
+cache/
+chroot/
+
+# Generated ISO files
+*.iso
+*.iso.zsync
+*.contents
+*.files
+*.packages
+
+# Build state files
+binary.modified_timestamps
+chroot.files
+chroot.packages.*
+
+# Generated config files
+config/binary
+config/bootstrap
+config/chroot
+config/common
+config/source
+config/apt/
+config/archives/
+config/debian-installer/
+config/hooks/live/
+config/includes.binary/
+config/includes.bootstrap/
+config/includes.installer/
+config/includes.source/
+config/packages*/
+config/preseed/
+config/rootfs/
+
+# Generated hooks (keep only our custom ones)
+config/hooks/normal/[1-9]*.hook.chroot
+
