@@ -55,6 +55,7 @@ echo "Creating desktop installer package list..."
 cat > config/package-lists/installer.list.chroot << 'EOF'
 calamares
 calamares-settings-debian
+squashfs-tools
 qml-module-qtquick2
 qml-module-qtquick-controls
 qml-module-qtquick-controls2
@@ -90,6 +91,7 @@ curl
 wget
 network-manager
 network-manager-gnome
+squashfs-tools
 
 # Browser and Common Apps
 firefox-esr
@@ -203,6 +205,10 @@ cat > config/hooks/normal/0005-user-setup.hook.chroot << 'EOF'
 #!/bin/sh
 set -e
 
+# Ensure squashfs-tools is installed
+apt-get update
+apt-get install -y squashfs-tools
+
 # Create a user with a known password for the live session
 useradd -m -s /bin/bash intego
 echo "intego:integotec123" | chpasswd
@@ -277,6 +283,47 @@ requirements:
         - ram
         - root
 EEOF
+
+# Create a custom Calamares settings file to ensure proper installation
+cat > /etc/calamares/settings.conf << EEOF
+---
+modules-search: [ /usr/lib/calamares/modules ]
+
+sequence:
+  - show:
+      - welcome
+      - locale
+      - keyboard
+      - partition
+      - users
+      - summary
+  - exec:
+      - partition
+      - mount
+      - unpackfs
+      - machineid
+      - fstab
+      - locale
+      - keyboard
+      - localecfg
+      - luksbootkeyfile
+      - users
+      - networkcfg
+      - hwclock
+      - services-systemd
+      - packages
+      - grubcfg
+      - bootloader-config
+      - bootloader
+      - umount
+
+branding: integos
+prompt-install: true
+dont-chroot: false
+EEOF
+
+# Make sure we have a modules directory for Calamares
+mkdir -p /etc/calamares/modules
 EOF
 chmod +x config/hooks/normal/0005-user-setup.hook.chroot
 
@@ -369,13 +416,23 @@ exit 0
 EEOF
 chmod +x /usr/local/bin/install-zoom
 
-# Create a custom hook for Calamares to run after installation
+# Add script to customize the installed system
 mkdir -p /etc/calamares/scripts
-cat > /etc/calamares/scripts/chroot-scripts.conf << EEOF
+cat > /etc/calamares/scripts/packages.conf << EEOF
 ---
-chroot: true
 script:
-    - command: "/usr/local/bin/install-zoom"
+  - command: "apt-get update"
+  - command: "apt-get install -y squashfs-tools libxcb-cursor0"
+  - command: "dpkg -i /usr/local/src/zoom_amd64.deb || apt-get install -f -y"
+EEOF
+
+# Add unpackfs module config for Calamares
+cat > /etc/calamares/modules/unpackfs.conf << EEOF
+---
+unpack:
+    -   source: "/run/live/medium/live/filesystem.squashfs"
+        sourcefs: "squashfs"
+        destination: ""
 EEOF
 
 # Create autostart entry for all users
@@ -395,34 +452,71 @@ if [ -d /home/intego/.config/autostart ]; then
     chown intego:intego /home/intego/.config/autostart/check-zoom.desktop
 fi
 
-# Create a hook to run in the target system after installation
-mkdir -p /usr/share/initramfs-tools/hooks/
-cat > /usr/share/initramfs-tools/hooks/zoom-installer << EEOF
+# Cleanup
+cd /
+rm -rf $TEMPDIR
+EOF
+
+# Create a hook to install Zoom in the final installation
+cat > config/includes.chroot/usr/share/initramfs-tools/hooks/zoom-installer << 'EOF'
 #!/bin/sh
+# This file should be executed during install to install Zoom in the target system
+set -e
 PREREQ=""
 prereqs()
 {
-    echo "\$PREREQ"
+   echo "$PREREQ"
 }
 
-case \$1 in
-    prereqs)
-        prereqs
-        exit 0
-        ;;
+case $1 in
+# Get pre-requisites
+prereqs)
+   prereqs
+   exit 0
+   ;;
 esac
 
 . /usr/share/initramfs-tools/hook-functions
 
-# Copy Zoom package and installer script to the initramfs
+# Copy Zoom installation files
 copy_file script /usr/local/src/zoom_amd64.deb
-copy_file script /usr/local/bin/install-zoom
-EEOF
-chmod +x /usr/share/initramfs-tools/hooks/zoom-installer
+EOF
+chmod +x config/includes.chroot/usr/share/initramfs-tools/hooks/zoom-installer
 
-# Cleanup
-cd /
-rm -rf $TEMPDIR
+# Make a post-installation script to run in the target system
+cat > config/includes.chroot/usr/sbin/integos-firstboot << 'EOF'
+#!/bin/bash
+# This script runs on first boot to finalize installation
+set -e
+
+# Check if Zoom is already installed
+if [ ! -f /usr/bin/zoom ]; then
+    # Install Zoom dependencies
+    apt-get update
+    apt-get install -y libxcb-cursor0
+    
+    # Install Zoom if the package exists
+    if [ -f /usr/local/src/zoom_amd64.deb ]; then
+        dpkg -i /usr/local/src/zoom_amd64.deb || apt-get install -f -y
+    fi
+fi
+EOF
+chmod +x config/includes.chroot/usr/sbin/integos-firstboot
+
+# Create a systemd service to run the firstboot script
+mkdir -p config/includes.chroot/etc/systemd/system/
+cat > config/includes.chroot/etc/systemd/system/integos-firstboot.service << 'EOF'
+[Unit]
+Description=IntegOS First Boot Setup
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/integos-firstboot
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
 EOF
 
 # Make hooks executable
